@@ -1,64 +1,65 @@
 #include <stdio.h>
-#include <ctype.h>   // for isupper() — checks if a character is uppercase (non-terminal)
-#include <string.h>  // for string operations
+#include <ctype.h>
+#include <string.h>
 
 #define MAX 10
 
-char production[MAX][MAX];   // stores grammar rules like A=aB
-char first[MAX];             // stores the computed FIRST symbols
-int n;                       // number of productions
+char production[MAX][MAX];
+char first[MAX];
+int n;
 
-
-void addToResult(char ch)
-{
+void addToResult(char ch) {
     for (int i = 0; first[i] != '\0'; i++)
-        if (first[i] == ch) return;  // skip duplicates
+        if (first[i] == ch) return;
     int len = strlen(first);
     first[len] = ch;
     first[len + 1] = '\0';
 }
 
-void findFirst(char c)
-{
-    // 🔹 Rule 1: If X is a terminal → FIRST(X) = {X}
-    if (!isupper(c)) // not a capital letter → terminal
-    {
+void findFirst(char c) {
+    if (!isupper(c)) { // terminal
         addToResult(c);
         return;
     }
 
-    // 🔹 Otherwise, X is a non-terminal → explore its productions
-    for (int i = 0; i < n; i++)
-    {
-        if (production[i][0] == c)   // production starts with X
-        {
-            // Example: A=aB → production[i][2] = 'a'
-            char next = production[i][2];
+    for (int i = 0; i < n; i++) {
+        if (production[i][0] == c) {
+            int j = 2; // start after '='
+            while (production[i][j] != '\0') {
+                char next = production[i][j];
 
-            // 🔹 Rule 2: If production is X → ε → add ε
-            if (next == '$')          // '$' used to represent epsilon
-                addToResult('$');
+                if (next == '$') { // epsilon
+                    addToResult('$');
+                    break;
+                } else if (!isupper(next)) { // terminal
+                    addToResult(next);
+                    break;
+                } else { // non-terminal
+                    int oldLen = strlen(first);
+                    findFirst(next);
 
-            // 🔹 Rule 3: If X → terminal α → add that terminal
-            else if (!isupper(next))  // if RHS starts with terminal
-                addToResult(next);
+                    // check if ε is in FIRST(next)
+                    int hasEpsilon = 0;
+                    for (int k = oldLen; first[k] != '\0'; k++)
+                        if (first[k] == '$')
+                            hasEpsilon = 1;
 
-            // 🔹 Rule 4: If X → Yα and Y is non-terminal → FIRST(Y) ⊆ FIRST(X)
-            else if (isupper(next))
-                findFirst(next);
+                    if (!hasEpsilon)
+                        break; // stop if no ε, else continue next symbol
+                }
+                j++;
+            }
         }
     }
 }
 
-
-int main()
-{
+int main() {
     printf("Enter number of productions: ");
     scanf("%d", &n);
 
     printf("Enter productions (e.g., A=aB):\n");
     for (int i = 0; i < n; i++)
-        scanf("%s", production[i]);  // input grammar rules
+        scanf("%s", production[i]);
 
     char ch;
     int choice;
@@ -67,7 +68,6 @@ int main()
         printf("\nFind FIRST of which non-terminal? ");
         scanf(" %c", &ch);
 
-        // reset first[] before each new computation
         first[0] = '\0';
         findFirst(ch);
 
@@ -78,7 +78,6 @@ int main()
 
         printf("\nDo you want to find FIRST of another symbol? (1 = Yes / 0 = No): ");
         scanf("%d", &choice);
-
     } while (choice == 1);
 
     return 0;
